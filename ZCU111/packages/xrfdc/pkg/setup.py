@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
    name = "xrfdc",
@@ -7,7 +7,7 @@ setup(
    license = 'All rights reserved.',
    author = "Craig Ramsay",
    author_email = "cramsay01@gmail.com",
-   packages = ['xrfdc'],
+   packages = find_packages(),
    package_data = {
    '' : ['*.py','*.so','*.c'],
    },
