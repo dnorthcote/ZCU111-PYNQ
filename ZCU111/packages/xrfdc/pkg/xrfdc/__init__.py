@@ -63,27 +63,30 @@ def _safe_wrapper(name, *args, **kwargs):
 
 # To reduce the amount of typing we define the properties we want for each
 # class in the hierarchy. Each element of the array is a tuple consisting of
-# the property name, the type of the property and whether or not it is
-# read-only. These should match the specification of the C API but without the
-# `XRFdc_` prefix in the case of the function name.
+# the property name, the type of the property, whether or not it is
+# read-only, whether or not it is write-only, whether or not it is an implicit read,
+# and whether or not it is an implicit write. These should match the specification 
+# of the C API but without the `XRFdc_` prefix in the case of the function name.
 
 _block_props = [("BlockStatus", "XRFdc_BlockStatus", True),
                 ("MixerSettings", "XRFdc_Mixer_Settings", False),
                 ("QMCSettings", "XRFdc_QMC_Settings", False),
                 ("CoarseDelaySettings", "XRFdc_CoarseDelay_Settings", False),
-                ("NyquistZone", "u32", False),
-                ("FabRdVldWords", "u32", True),
-                ("FabWrVldWords", "u32", True)]
+                ("NyquistZone", "u32", False)]
 
-_adc_props = [("DecimationFactor", "u32", False),
-              ("ThresholdClearMode", "u32", False),
-              ("ThresholdSettings", "XRFdc_Threshold_Settings", False),
-              ("CalibrationMode", "u8", False)]
+_adc_props = [("DecimationFactor", "u32", False, False, True, True),
+              ("ThresholdClrMode", "u32", False, False, True, True),
+              ("ThresholdSettings", "XRFdc_Threshold_Settings", False, False, True, True),
+              ("CalibrationMode", "u8", False, False, True, True),
+              ("FabRdVldWords", "u32", False, False, False, True),
+              ("FabWrVldWords", "u32", True, False, False, False)]
 
-_dac_props = [("InterpolationFactor", "u32", False),
-              ("DecoderMode", "u32", False),
-              ("OutputCurr", "int", True),
-              ("InvSincFIR", "u16", False)]
+_dac_props = [("InterpolationFactor", "u32", False, False, True, True),
+              ("DecoderMode", "u32", False, False, True, True),
+              ("OutputCurr", "int", True, False, True, True),
+              ("InvSincFIR", "u16", False, False, True, True),
+              ("FabRdVldWords", "u32", True, False, False, False),
+              ("FabWrVldWords", "u32", False, False, False, True)]
 
 _tile_props = [("FabClkOutDiv", "u16", False),
                ("FIFOStatus", "u8", True),
@@ -132,11 +135,11 @@ def _unpack_value(typename, value):
 # calls. 
 
 
-def _create_c_property(name, typename, readonly, implicit_type=False):
+def _create_c_property(name, typename, readonly, writeonly=False, implicit_read=False, implicit_write=False):
     def _get(self):
         value = _ffi.new(f"{typename}*")
-        c_func = self._call_function if not implicit_type else \
-                 self._call_function_implicit
+        c_func = self._call_function if not implicit_read else \
+            self._call_function_implicit
         c_func(f"Get{name}", value)
         value = _unpack_value(typename, value)
         if isinstance(value, PropertyDict):
@@ -145,13 +148,15 @@ def _create_c_property(name, typename, readonly, implicit_type=False):
         return value
 
     def _set(self, value):
-        if not implicit_type:
+        if not implicit_write:
             self._call_function(f"Set{name}", _pack_value(typename, value))
         else:
             self._call_function_implicit(f"Set{name}", _pack_value(typename, value))
 
     if readonly:
         return property(_get)
+    elif writeonly:
+        return property(_set)
     else:
         return property(_get, _set)
 
@@ -267,11 +272,13 @@ class RFdc(pynq.DefaultIP):
 for (name, typename, readonly) in _block_props:
     setattr(RFdcBlock, name, _create_c_property(name, typename, readonly))
 
-for (name, typename, readonly) in _adc_props:
-    setattr(RFdcAdcBlock, name, _create_c_property(name, typename, readonly, implicit_type=True))
+for (name, typename, readonly, writeonly, implicit_read, implicit_write) in _adc_props:
+    setattr(RFdcAdcBlock, name, _create_c_property(name, typename, readonly, writeonly,
+        implicit_read, implicit_write))
 
-for (name, typename, readonly) in _dac_props:
-    setattr(RFdcDacBlock, name, _create_c_property(name, typename, readonly, implicit_type=True))
+for (name, typename, readonly, writeonly, implicit_read, implicit_write) in _dac_props:
+    setattr(RFdcDacBlock, name, _create_c_property(name, typename, readonly, writeonly,
+        implicit_read, implicit_write))
 
 for (name, typename, readonly) in _tile_props:
     setattr(RFdcTile, name, _create_c_property(name, typename, readonly))
