@@ -68,32 +68,43 @@ def _safe_wrapper(name, *args, **kwargs):
 # and whether or not it is an implicit write. These should match the specification 
 # of the C API but without the `XRFdc_` prefix in the case of the function name.
 
-_block_props = [("BlockStatus", "XRFdc_BlockStatus", True),
-                ("MixerSettings", "XRFdc_Mixer_Settings", False),
-                ("QMCSettings", "XRFdc_QMC_Settings", False),
-                ("CoarseDelaySettings", "XRFdc_CoarseDelay_Settings", False),
-                ("NyquistZone", "u32", False)]
+#    Name                 , C Type                      , RO   , WO   , ImpR , ImpW
+_block_props = [
+    ("BlockStatus"        , "XRFdc_BlockStatus"         , True                      ),
+    ("MixerSettings"      , "XRFdc_Mixer_Settings"      , False                     ),
+    ("QMCSettings"        , "XRFdc_QMC_Settings"        , False                     ),
+    ("CoarseDelaySettings", "XRFdc_CoarseDelay_Settings", False                     ),
+    ("NyquistZone"        , "u32"                       , False                     )
+]
 
-_adc_props = [("DecimationFactor", "u32", False, False, True, True),
-              ("ThresholdClrMode", "u32", False, False, True, True),
-              ("ThresholdSettings", "XRFdc_Threshold_Settings", False, False, True, True),
-              ("CalibrationMode", "u8", False, False, True, True),
-              ("FabRdVldWords", "u32", False, False, False, True),
-              ("FabWrVldWords", "u32", True, False, False, False)]
+_adc_props = [
+    ("DecimationFactor"   , "u32"                       , False, False, True , True ),
+    ("ThresholdClrMode"   , "u32"                       , False, False, True , True ),
+    ("ThresholdSettings"  , "XRFdc_Threshold_Settings"  , False, False, True , True ),
+    ("CalibrationMode"    , "u8"                        , False, False, True , True ),
+    ("FabRdVldWords"      , "u32"                       , False, False, False, True ),
+    ("FabWrVldWords"      , "u32"                       , True , False, False, False)
+]
 
-_dac_props = [("InterpolationFactor", "u32", False, False, True, True),
-              ("DecoderMode", "u32", False, False, True, True),
-              ("OutputCurr", "int", True, False, True, True),
-              ("InvSincFIR", "u16", False, False, True, True),
-              ("FabRdVldWords", "u32", True, False, False, False),
-              ("FabWrVldWords", "u32", False, False, False, True)]
+_dac_props = [
+    ("InterpolationFactor", "u32"                       , False, False, True , True ),
+    ("DecoderMode"        , "u32"                       , False, False, True , True ),
+    ("OutputCurr"         , "int"                       , True , False, True , True ),
+    ("InvSincFIR"         , "u16"                       , False, False, True , True ),
+    ("FabRdVldWords"      , "u32"                       , True , False, False, False),
+    ("FabWrVldWords"      , "u32"                       , False, False, False, True )
+]
 
-_tile_props = [("FabClkOutDiv", "u16", False),
-               ("FIFOStatus", "u8", True),
-               ("ClockSource", "u32", True),
-               ("PLLLockStatus", "u32", True)]
+_tile_props = [
+    ("FabClkOutDiv"       , "u16"                       , False                     ),
+    ("FIFOStatus"         , "u8"                        , True                      ),
+    ("ClockSource"        , "u32"                       , True                      ),
+    ("PLLLockStatus"      , "u32"                       , True                      )
+]
 
-_rfdc_props = [("IPStatus", "XRFdc_IPStatus", True)]
+_rfdc_props = [
+    ("IPStatus"           , "XRFdc_IPStatus"            , True                      )
+]
 
 # Next we define some helper functions for creating properties and
 # packing/unpacking Python types into C structures
