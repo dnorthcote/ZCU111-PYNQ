@@ -123,6 +123,10 @@ class PropertyDict(dict):
         dict.__setitem__(self, key, val)
         self.callback(self)
 
+    def update(self, *args, **kwargs):
+        dict.update(self, *args, **kwargs)
+        self.callback(self)
+
 
 def _pack_value(typename, value):
     if isinstance(value, dict):
