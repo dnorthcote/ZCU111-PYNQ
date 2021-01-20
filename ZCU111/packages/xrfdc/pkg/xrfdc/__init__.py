@@ -138,12 +138,12 @@ def _pack_value(typename, value):
 def _unpack_value(value):
     ctype = _ffi.typeof(value)
 
-    # Derefence pointers
+    # Dereference pointers
     if ctype.kind == 'pointer':
         return _unpack_value(value[0])
 
     # Struct -> Dict
-    elif ctype.kind == 'struct': # Struct -> Dict
+    elif ctype.kind == 'struct':
         return PropertyDict({
             k: _unpack_value(getattr(value, k)) if ktype.type.kind != 'primitive' else \
                              getattr(value, k)
