@@ -137,11 +137,32 @@ def _pack_value(typename, value):
     return value
 
 
-def _unpack_value(typename, value):
-    if dir(value):
-        return PropertyDict({k: getattr(value, k) for k in dir(value)}) # Struct
+def _unpack_value(value):
+    ctype = _ffi.typeof(value)
+
+    # Derefence pointers
+    if ctype.kind == 'pointer':
+        return _unpack_value(value[0])
+
+    # Struct -> Dict
+    elif ctype.kind == 'struct': # Struct -> Dict
+        return PropertyDict({
+            k: _unpack_value(getattr(value, k)) if ktype.type.kind != 'primitive' else \
+                             getattr(value, k)
+            for (k,ktype) in ctype.fields
+        })
+
+    # Array -> List
+    elif ctype.kind == 'array':
+        return [
+            _unpack_value(value[i]) if ctype.item.kind != 'primitive' else \
+                          value[i]
+            for i in range(ctype.length)
+        ]
+
+    # Primitive
     else:
-        return value[0] # Scalar
+        return value[0]
 
 # The underlying C functions for generic behaviour (applies to both DAC
 # and ADC blocks) expect an argument for the type of block used.
@@ -156,7 +177,7 @@ def _create_c_property(name, typename, readonly, writeonly=False, implicit_read=
         c_func = self._call_function if not implicit_read else \
             self._call_function_implicit
         c_func(f"Get{name}", value)
-        value = _unpack_value(typename, value)
+        value = _unpack_value(value)
         if isinstance(value, PropertyDict):
             value.set_callback(lambda value: c_func(
                 f"Set{name}", _pack_value(typename, value)))
