@@ -79,8 +79,6 @@ _block_props = [
 
 _adc_props = [
     ("DecimationFactor"   , "u32"                       , False, False, True , True ),
-    ("ThresholdClrMode"   , "u32"                       , False, False, True , True ),
-    ("ThresholdSettings"  , "XRFdc_Threshold_Settings"  , False, False, True , True ),
     ("CalibrationMode"    , "u8"                        , False, False, True , True ),
     ("FabRdVldWords"      , "u32"                       , False, False, False, True ),
     ("FabWrVldWords"      , "u32"                       , True , False, False, False)
@@ -200,6 +198,46 @@ def _create_c_property(name, typename, readonly, writeonly=False, implicit_read=
 # hierarchy has a `_call_function` method which handles adding the
 # block/tile/toplevel arguments to the list of function parameters.
 
+class RFdcThreshold:
+    def __init__(self, parent, index):
+        self._parent = parent
+        self._index = index
+
+        self._call_function = parent._call_function
+        self._call_function_implicit = parent._call_function_implicit
+        setattr(RFdcThreshold, '_settings',
+                _create_c_property('ThresholdSettings', 'XRFdc_Threshold_Settings',
+                False, False, True, True
+        ))
+
+
+    def SetClrMode(self, clr_mode):
+        self._parent._call_function_implicit("SetThresholdClrMode", self._index+1, clr_mode)
+
+    def StickyClear(self):
+        self._parent._call_function_implicit("ThresholdStickyClear", self._index+1)
+
+    @property
+    def Settings(self):
+        raw_settings = self._settings
+        return {
+            'ThresholdMode'    : raw_settings['ThresholdMode'    ][self._index],
+            'ThresholdAvgVal'  : raw_settings['ThresholdAvgVal'  ][self._index],
+            'ThresholdUnderVal': raw_settings['ThresholdUnderVal'][self._index],
+            'ThresholdOverVal' : raw_settings['ThresholdOverVal' ][self._index]
+        }
+
+    @Settings.setter
+    def Settings(self, settings):
+        kpack = lambda x, i : [x,0] if i==0 else [0,x]
+        self._settings = {
+            'UpdateThreshold'  : self._index+1,
+            'ThresholdMode'    : kpack(settings['ThresholdMode'    ], self._index),
+            'ThresholdAvgVal'  : kpack(settings['ThresholdAvgVal'  ], self._index),
+            'ThresholdUnderVal': kpack(settings['ThresholdUnderVal'], self._index),
+            'ThresholdOverVal' : kpack(settings['ThresholdOverVal' ], self._index)
+        }
+
 
 class RFdcBlock:
     def __init__(self, parent, index):
@@ -227,12 +265,10 @@ class RFdcDacBlock(RFdcBlock):
 class RFdcAdcBlock(RFdcBlock):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.thresholds = [RFdcThreshold(self, i) for i in range(2)]
 
     def _call_function_implicit(self, name, *args):
         return self._parent._call_function_implicit(name, self._index, *args)
-
-    def ThresholdStickyClear(self, ThresholdToUpdate):
-        self._call_function_implicit("ThresholdStickyClear", ThresholdToUpdate)
 
 
 class RFdcTile:
@@ -361,3 +397,10 @@ FAB_CLK_DIV2   = 0x2
 FAB_CLK_DIV4   = 0x3
 FAB_CLK_DIV8   = 0x4
 FAB_CLK_DIV16  = 0x5
+
+THRESHOLD_CLRMD_MANUAL_CLR = 0x1
+THRESHOLD_CLRMD_AUTO_CLR   = 0x2
+TRSHD_OFF                  = 0x0
+TRSHD_STICKY_OVER          = 0x1
+TRSHD_STICKY_UNDER         = 0x2
+TRSHD_HYSTERISIS           = 0x3
