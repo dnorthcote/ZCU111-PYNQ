@@ -136,6 +136,11 @@ def _pack_value(typename, value):
 
 
 def _unpack_value(value):
+    
+    # Guard against python primitives
+    if type(value) in [int,str,bool]:
+        return value
+
     ctype = _ffi.typeof(value)
 
     # Dereference pointers
@@ -158,7 +163,7 @@ def _unpack_value(value):
             for i in range(ctype.length)
         ]
 
-    # Primitive
+    # C primitive
     else:
         return value[0]
 
